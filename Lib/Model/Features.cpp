@@ -10,8 +10,11 @@ Features::Features()
 {
     mMemoryInfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
 
+    mSessionOptions.SetExecutionMode(ExecutionMode::ORT_SEQUENTIAL);
+    mSessionOptions.SetIntraOpNumThreads(0);
     mSessionOptions.SetInterOpNumThreads(1);
-    mSessionOptions.SetIntraOpNumThreads(1);
+
+    mSessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
 
     mSession = Ort::Session(mEnv, BinaryData::features_model_ort, BinaryData::features_model_ortSize, mSessionOptions);
 }

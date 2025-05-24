@@ -98,7 +98,7 @@ struct App : juce::JUCEApplication
 
         float inNoteSensitivity = 0.7;
         float inPitchSensitivity = 0.5;
-        float inMinNoteDurationMs = 125;
+        float inMinNoteDurationMs = 50;
 
         basicPitch.setParameters(inNoteSensitivity, inPitchSensitivity, inMinNoteDurationMs);
 
@@ -107,7 +107,7 @@ struct App : juce::JUCEApplication
                                     buffer->getNumSamples());
         auto stop = std::chrono::high_resolution_clock::now();
         auto processingTime = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-        std::cout << "Stems split in " << convertMillis(processingTime.count()) << "s" << std::endl;
+        std::cout << "Audio converted to MIDI in " << convertMillis(processingTime.count()) << "s" << std::endl;
 
         auto noteEvents = basicPitch.getNoteEvents();
 
