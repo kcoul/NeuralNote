@@ -12,13 +12,15 @@ your favorite Digital Audio Workstation.
 
 ## Install NeuralNote
 
-Download the latest release for your platform [here](https://github.com/DamRsn/NeuralNote/releases) (Windows and macOS (
-Universal) supported)!
+Download the latest release for your platform [here](https://github.com/DamRsn/NeuralNote/releases) (Windows, macOS (
+Universal) and Linux supported)!
 
-Currently, only the raw `.vst3`, `.component` (Audio Unit), `.app` and `.exe` (Standalone) files are provided.
-Installers will be created soon. In the meantime, you can manually copy the plugin/app file in the appropriate
-directory. The code is signed on macOS, but not on Windows, so you might have to perform few extra steps in order to be
-able to use NeuralNote on Windows.
+Installers are available for both Windows and Mac, including Standalone, VST3, and AU (Mac only) versions. The
+installers allow users to select which format(s) they want to install. On macOS, the code is signed, while on Windows,
+it is not. This means you may need to take a few additional steps to use NeuralNote on Windows.
+
+For Linux, raw binaries are provided for VST3 and Standalone. You can install them by copying the files to the
+appropriate locations.
 
 ## Usage
 
@@ -120,15 +122,6 @@ But here's a description of the process we followed to create those files:
 
 The original basic-pitch CNN was split in 4 sequential models wired together, so they can be run with RTNeural.
 
-## Roadmap
-
-- Improve stability
-- Save plugin internal state properly, so it can be loaded back when reentering a session. Make parameters visible to
-  the DAW.
-- Add tooltips
-- Make internal synth support pitch bends
-- Send MIDI out of the plugin to be routed to another instrument
-
 ## Bug reports and feature requests
 
 If you have any request/suggestion concerning the plugin or encounter a bug, please file a GitHub issue.
@@ -146,7 +139,7 @@ NeuralNote software and code is published under the Apache-2.0 license. See the 
 
 Here's a list of all the third party libraries used in NeuralNote and the license under which they are used.
 
-- [JUCE](https://juce.com/) (JUCE Personal)
+- [JUCE](https://juce.com/) (JUCE Starter)
 - [RTNeural](https://github.com/jatinchowdhury18/RTNeural) (BSD-3-Clause license)
 - [ONNXRuntime](https://github.com/microsoft/onnxruntime) (MIT License)
 - [ort-builder](https://github.com/olilarkin/ort-builder) (MIT License)
@@ -172,6 +165,11 @@ NeuralNote was developed by [Damien Ronssin](https://github.com/DamRsn) and [Tib
 The plugin user interface was designed by Perrine Morel.
 
 #### Contributors
+
 Many thanks to the contributors!
+
 - [jatinchowdhury18](https://github.com/jatinchowdhury18): File browser.
-- [trirpi](https://github.com/trirpi) More scale options in `SCALE QUANTIZE`.
+- [trirpi](https://github.com/trirpi)
+    - More scale options in `SCALE QUANTIZE`.
+    - Horizontal zoom for the audio waveform and the piano roll.
+- [polygon](https://github.com/polygon) and [SamuMazzi](https://github.com/SamuMazzi): Linux support.

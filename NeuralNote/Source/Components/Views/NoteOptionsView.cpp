@@ -8,54 +8,68 @@
 NoteOptionsView::NoteOptionsView(NeuralNoteAudioProcessor& processor)
     : mProcessor(processor)
 {
-    mMinMaxNoteSlider = std::make_unique<MinMaxNoteSlider>(mProcessor.getCustomParameters()->minMidiNote,
-                                                           mProcessor.getCustomParameters()->maxMidiNote,
-                                                           [this]() { _valueChanged(); });
-    addAndMakeVisible(*mMinMaxNoteSlider);
+    mEnableButton = std::make_unique<TextButton>("EnableNoteOptionsButton");
+    mEnableButton->setButtonText("");
+    mEnableButton->setClickingTogglesState(true);
 
-    mKeyDropdown = std::make_unique<juce::ComboBox>("KeyRootNoteDropDown");
-    mKeyDropdown->setEditableText(false);
-    mKeyDropdown->setJustificationType(juce::Justification::centredLeft);
-    mKeyDropdown->addItemList(NoteUtils::RootNotesSharpStr, 1);
-    mKeyDropdown->onChange = [this]() {
-        mProcessor.getCustomParameters()->keyRootNote.store(mKeyDropdown->getSelectedItemIndex());
-        _valueChanged();
-    };
-    mKeyDropdown->setSelectedItemIndex(mProcessor.getCustomParameters()->keyRootNote.load());
+    mEnableButton->setColour(TextButton::buttonColourId, Colours::white.withAlpha(0.2f));
+    mEnableButton->setColour(TextButton::buttonOnColourId, BLACK);
+    mEnableButton->setTooltip(NeuralNoteTooltips::sq_enable);
 
-    addAndMakeVisible(*mKeyDropdown);
+    mEnableAttachment = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(
+        mProcessor.getAPVTS(), ParameterHelpers::getIdStr(ParameterHelpers::EnableNoteQuantizationId), *mEnableButton);
+    addAndMakeVisible(mEnableButton.get());
 
-    mKeyType = std::make_unique<juce::ComboBox>("ScaleTypeDropDown");
+    mMinMaxNoteSlider = std::make_unique<MinMaxNoteSlider>(*mProcessor.getParams()[ParameterHelpers::MinMidiNoteId],
+                                                           *mProcessor.getParams()[ParameterHelpers::MaxMidiNoteId]);
+    mMinMaxNoteSlider->setTooltip(NeuralNoteTooltips::sq_note_range);
+    addAndMakeVisible(mMinMaxNoteSlider.get());
+
+    mRootNoteDropdown = std::make_unique<ComboBox>("KeyRootNoteDropDown");
+    mRootNoteDropdown->setEditableText(false);
+    mRootNoteDropdown->setJustificationType(Justification::centredLeft);
+    mRootNoteDropdown->addItemList(NoteUtils::RootNotesSharpStr, 1);
+    mRootNoteDropdown->setTooltip(NeuralNoteTooltips::sq_root_note);
+    mKeyAttachment = std::make_unique<ComboBoxParameterAttachment>(
+        *mProcessor.getParams()[ParameterHelpers::KeyRootNoteId], *mRootNoteDropdown);
+    addAndMakeVisible(mRootNoteDropdown.get());
+
+    mKeyType = std::make_unique<ComboBox>("ScaleTypeDropDown");
     mKeyType->setEditableText(false);
-    mKeyType->setJustificationType(juce::Justification::centredLeft);
+    mKeyType->setJustificationType(Justification::centredLeft);
     mKeyType->addItemList(NoteUtils::ScaleTypesStr, 1);
-    mKeyType->onChange = [this]() {
-        mProcessor.getCustomParameters()->keyType.store(mKeyType->getSelectedItemIndex());
-        _valueChanged();
-    };
-    mKeyType->setSelectedItemIndex(mProcessor.getCustomParameters()->keyType.load());
+    mKeyType->setTooltip(NeuralNoteTooltips::sq_scale_type);
+    mKeyTypeAttachment =
+        std::make_unique<ComboBoxParameterAttachment>(*mProcessor.getParams()[ParameterHelpers::KeyTypeId], *mKeyType);
+    addAndMakeVisible(mKeyType.get());
 
-    addAndMakeVisible(*mKeyType);
-
-    mSnapMode = std::make_unique<juce::ComboBox>("SnapModeDropDown");
+    mSnapMode = std::make_unique<ComboBox>("SnapModeDropDown");
     mSnapMode->setEditableText(false);
-    mSnapMode->setJustificationType(juce::Justification::centredLeft);
+    mSnapMode->setJustificationType(Justification::centredLeft);
     mSnapMode->addItemList(NoteUtils::SnapModesStr, 1);
-    mSnapMode->onChange = [this]() {
-        mProcessor.getCustomParameters()->keySnapMode.store(mSnapMode->getSelectedItemIndex());
-        _valueChanged();
-    };
-    mSnapMode->setSelectedItemIndex(mProcessor.getCustomParameters()->keySnapMode.load());
-
-    addAndMakeVisible(*mSnapMode);
+    mSnapMode->setTooltip(NeuralNoteTooltips::sq_snap_mode);
+    mSnapModeAttachment = std::make_unique<ComboBoxParameterAttachment>(
+        *mProcessor.getParams()[ParameterHelpers::KeySnapModeId], *mSnapMode);
+    addAndMakeVisible(mSnapMode.get());
 
     setSize(266, 139);
+
+    mProcessor.getParams()[static_cast<size_t>(ParameterHelpers::EnableNoteQuantizationId)]->addListener(this);
+
+    bool is_enabled = mProcessor.getParameterValue(ParameterHelpers::EnableNoteQuantizationId) > 0.5f;
+    _enableView(is_enabled);
+}
+
+NoteOptionsView::~NoteOptionsView()
+{
+    mProcessor.getParams()[static_cast<size_t>(ParameterHelpers::EnableNoteQuantizationId)]->removeListener(this);
 }
 
 void NoteOptionsView::resized()
 {
+    mEnableButton->setBounds(0, 0, 18, 18);
     mMinMaxNoteSlider->setBounds(64, 17 + LEFT_SECTIONS_TOP_PAD, 189, 17);
-    mKeyDropdown->setBounds(64, LEFT_SECTIONS_TOP_PAD + 46, 55, 17);
+    mRootNoteDropdown->setBounds(64, LEFT_SECTIONS_TOP_PAD + 46, 55, 17);
     mKeyType->setBounds(124, LEFT_SECTIONS_TOP_PAD + 46, 129, 17);
     mSnapMode->setBounds(100, LEFT_SECTIONS_TOP_PAD + 75, 154, 17);
 }
@@ -69,38 +83,41 @@ void NoteOptionsView::paint(Graphics& g)
                            static_cast<float>(getHeight() - LEFT_SECTIONS_TOP_PAD),
                            5.0f);
 
-    float alpha = isEnabled() ? 1.0f : DISABLED_ALPHA;
+    float alpha = mIsViewEnabled && isEnabled() ? 1.0f : DISABLED_ALPHA;
 
     mMinMaxNoteSlider->setAlpha(alpha);
     g.setColour(BLACK.withAlpha(alpha));
 
-    g.setFont(TITLE_FONT);
-    g.drawText("SCALE QUANTIZE", Rectangle<int>(24, 0, 274, 17), juce::Justification::centredLeft);
+    g.setFont(UIDefines::TITLE_FONT());
+    g.drawText("SCALE QUANTIZE", Rectangle<int>(24, 0, 274, 17), Justification::centredLeft);
 
-    auto enable_rectangle = juce::Rectangle<int>(0, 0, 17, 17);
-    if (isEnabled())
-        g.fillRoundedRectangle(enable_rectangle.toFloat(), 4.0f);
-    else
-        g.drawRoundedRectangle(enable_rectangle.toFloat(), 4.0f, 1.0f);
+    g.setFont(UIDefines::LABEL_FONT());
+    g.drawText("RANGE", Rectangle<int>(19, mMinMaxNoteSlider->getY(), 80, 17), Justification::centredLeft);
 
-    g.setFont(LABEL_FONT);
-    g.drawText("RANGE", juce::Rectangle<int>(19, mMinMaxNoteSlider->getY(), 80, 17), juce::Justification::centredLeft);
+    g.drawText("KEY", Rectangle<int>(19, mRootNoteDropdown->getY(), 80, 17), Justification::centredLeft);
 
-    g.drawText("KEY", juce::Rectangle<int>(19, mKeyDropdown->getY(), 80, 17), juce::Justification::centredLeft);
-
-    g.drawText("SNAP MODE", juce::Rectangle<int>(19, mSnapMode->getY(), 80, 17), juce::Justification::centredLeft);
+    g.drawText("SNAP MODE", Rectangle<int>(19, mSnapMode->getY(), 80, 17), Justification::centredLeft);
 }
 
-void NoteOptionsView::_valueChanged()
+void NoteOptionsView::parameterValueChanged(int parameterIndex, float newValue)
 {
-    if (mProcessor.getState() == PopulatedAudioAndMidiRegions) {
-        mProcessor.updatePostProcessing();
-
-        auto* main_view = dynamic_cast<NeuralNoteMainView*>(getParentComponent());
-
-        if (main_view)
-            main_view->repaintPianoRoll();
-        else
-            jassertfalse;
+    if (parameterIndex == static_cast<int>(ParameterHelpers::EnableNoteQuantizationId)) {
+        bool enable = newValue > 0.5f;
+        _enableView(enable);
     }
+}
+
+void NoteOptionsView::parameterGestureChanged(int parameterIndex, bool gestureIsStarting)
+{
+    ignoreUnused(parameterIndex, gestureIsStarting);
+}
+
+void NoteOptionsView::_enableView(bool inEnable)
+{
+    mIsViewEnabled = inEnable;
+    mMinMaxNoteSlider->setEnabled(inEnable);
+    mRootNoteDropdown->setEnabled(inEnable);
+    mKeyType->setEnabled(inEnable);
+    mSnapMode->setEnabled(inEnable);
+    repaint();
 }

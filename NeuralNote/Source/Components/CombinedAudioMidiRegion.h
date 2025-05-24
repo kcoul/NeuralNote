@@ -16,6 +16,7 @@ class CombinedAudioMidiRegion
     : public Component
     , public FileDragAndDropTarget
     , public ChangeListener
+    , public ValueTree::Listener
 {
 public:
     CombinedAudioMidiRegion(NeuralNoteAudioProcessor* processor, Keyboard& keyboard);
@@ -46,11 +47,15 @@ public:
 
     void setCenterView(bool inShouldCenterView);
 
+    void mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) override;
+
+    void mouseMagnify(const MouseEvent& event, float scaleFactor) override;
+
     AudioRegion* getAudioRegion();
 
     PianoRoll* getPianoRoll();
 
-    const double mNumPixelsPerSecond = 100.0;
+    const double mBaseNumPixelsPerSecond = 100.0;
 
     const int mAudioRegionHeight = 85;
     const int mHeightBetweenAudioMidi = 23;
@@ -61,14 +66,26 @@ private:
 
     void _centerViewOnPlayhead();
 
+    bool _isFileTypeSupported(const String& filename) const;
+
+    void _setZoomLevel(double inZoomLevel);
+
+    void valueTreePropertyChanged(ValueTree& treeWhosePropertyHasChanged, const Identifier& property) override;
+
     NeuralNoteAudioProcessor* mProcessor;
 
     juce::Viewport* mViewportPtr = nullptr;
     juce::VBlankAttachment mVBlankAttachment;
 
+    const StringArray mSupportedAudioFileExtensions;
+
     bool mShouldCenterView = false;
 
     int mBaseWidth = 0;
+
+    const double mMaxZoomLevel = 5.0;
+    const double mMinZoomLevel = 0.1;
+    double mZoomLevel = 1.0;
 
     AudioRegion mAudioRegion;
     PianoRoll mPianoRoll;

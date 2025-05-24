@@ -4,24 +4,15 @@
 
 #include "MinMaxNoteSlider.h"
 
-MinMaxNoteSlider::MinMaxNoteSlider(std::atomic<int>& inAttachedMinValue,
-                                   std::atomic<int>& inAttachedMaxValue,
-                                   const std::function<void()>& inOnValueChange)
-    : mAttachedMinValue(inAttachedMinValue)
-    , mAttachedMaxValue(inAttachedMaxValue)
+MinMaxNoteSlider::MinMaxNoteSlider(RangedAudioParameter& inMinValue, RangedAudioParameter& inMaxValue)
+
 {
-    mOnValueChanged = inOnValueChange;
     mSlider.setSliderStyle(juce::Slider::TwoValueHorizontal);
     mSlider.setRange(MIN_MIDI_NOTE, MAX_MIDI_NOTE, 1);
     mSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::NoTextBox, true, 0, 0);
-    mSlider.onValueChange = [this]() {
-        mAttachedMinValue.store(int(mSlider.getMinValue()));
-        mAttachedMaxValue.store(int(mSlider.getMaxValue()));
-        mOnValueChanged();
-        repaint();
-    };
+    mAttachment = std::make_unique<TwoValueAttachment>(mSlider, inMinValue, inMaxValue);
 
-    mSlider.setMinAndMaxValues(mAttachedMinValue.load(), mAttachedMaxValue.load());
+    mSlider.onValueChange = [this] { repaint(); };
 
     addAndMakeVisible(mSlider);
 }
@@ -34,7 +25,7 @@ void MinMaxNoteSlider::resized()
 void MinMaxNoteSlider::paint(Graphics& g)
 {
     g.setColour(juce::Colours::black);
-    g.setFont(DROPDOWN_FONT);
+    g.setFont(UIDefines::DROPDOWN_FONT());
 
     g.drawText(NoteUtils::midiNoteToStr(int(mSlider.getMinValue())),
                Rectangle<int>(0, 0, 22, 12),
@@ -43,4 +34,9 @@ void MinMaxNoteSlider::paint(Graphics& g)
     g.drawText(NoteUtils::midiNoteToStr(int(mSlider.getMaxValue())),
                Rectangle<int>(168, 0, 22, 12),
                juce::Justification::centredRight);
+}
+
+void MinMaxNoteSlider::setTooltip(const String& inTooltip)
+{
+    mSlider.setTooltip(inTooltip);
 }

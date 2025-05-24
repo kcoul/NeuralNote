@@ -10,6 +10,7 @@
 #include "PluginProcessor.h"
 #include "Knob.h"
 #include "UIDefines.h"
+#include "NeuralNoteTooltips.h"
 
 class NeuralNoteMainView;
 
@@ -23,15 +24,14 @@ public:
     void paint(Graphics& g) override;
 
 private:
-    void _valueChanged();
-
     NeuralNoteAudioProcessor& mProcessor;
 
-    std::unique_ptr<Knob> mNoteSensibility;
-    std::unique_ptr<Knob> mSplitSensibility;
+    std::unique_ptr<Knob> mNoteSensitivity;
+    std::unique_ptr<Knob> mSplitSensitivity;
     std::unique_ptr<Knob> mMinNoteDuration;
 
     std::unique_ptr<juce::ComboBox> mPitchBendDropDown;
+    std::unique_ptr<juce::ComboBoxParameterAttachment> mPitchBendDropDownParameterAttachment;
 };
 
 #endif // TranscriptionOptionsView_h
