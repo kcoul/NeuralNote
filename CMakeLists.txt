@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 project(NeuralNotePlugin VERSION 1.1.0)
 
 # C++ settings
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 enable_language(CXX)
 
 #Compile commands, useful for some IDEs like VS-Code
@@ -10,7 +11,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 
 #Minimum MacOS target, set globally
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version" FORCE)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum OS X deployment version" FORCE)
 
 option(UniversalBinary "Build universal binary for mac" OFF)
 option(RTNeural_Release "When CMAKE_BUILD_TYPE=Debug, overwrite it to Release for RTNeural only" OFF)
@@ -30,6 +31,7 @@ find_package(JUCE)
 find_package(RTNeural)
 
 set(BaseTargetName NeuralNote)
+set(CLITargetName NeuralNoteCLI)
 
 # Set COPY_PLUGIN_AFTER_BUILD to TRUE on Mac and to FALSE on Windows due to permission issues
 if (APPLE)
@@ -120,7 +122,7 @@ target_compile_definitions(${BaseTargetName}
 add_library(onnxruntime SHARED IMPORTED)
 
 if (APPLE)
-    set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/ThirdParty/onnxruntime/lib/libonnxruntime.dylib)
+    set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/ThirdParty/onnxruntime-osx-arm64-1.22.0/lib/libonnxruntime.dylib)
 
 elseif (WIN32)
     set_property(TARGET onnxruntime APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
@@ -139,9 +141,7 @@ elseif (UNIX)
     set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/ThirdParty/onnxruntime/lib/libonnxruntime.a)
 endif ()
 
-
 target_include_directories("${BaseTargetName}" PRIVATE ${CMAKE_CURRENT_LIST_DIR}/ThirdParty/onnxruntime/include)
-
 
 target_link_libraries(${BaseTargetName}
         PRIVATE
@@ -173,3 +173,37 @@ if (WIN32)
     target_include_directories(${BaseTargetName} PRIVATE ThirdParty/ASIO/common)
 endif ()
 
+juce_add_console_app(${CLITargetName}
+        PRODUCT_NAME ${CLITargetName})
+
+juce_generate_juce_header(${CLITargetName})
+
+target_sources(${CLITargetName} PRIVATE
+        NeuralNote/Source/MidiFile/MidiFileWriter.cpp
+        Lib/DSP/Resampler.cpp
+        Lib/MidiPostProcessing/NoteOptions.cpp
+        Lib/Model/BasicPitch.cpp
+        Lib/Model/Features.cpp
+        Lib/Model/Notes.cpp
+        NeuralNoteCLI/main.cpp)
+
+target_include_directories("${CLITargetName}" PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/ThirdParty/onnxruntime/include
+        NeuralNote/Source
+        NeuralNote/Source/MidiFile
+        Lib/Model
+        Lib/Utils
+        )
+
+target_compile_definitions(${CLITargetName} PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0)
+
+target_link_libraries(${CLITargetName} PRIVATE
+        juce_recommended_config_flags
+        juce_recommended_lto_flags
+        juce_recommended_warning_flags
+        juce::juce_audio_utils
+        juce::juce_dsp
+        BasicPitchCNN
+        onnxruntime)
